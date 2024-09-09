@@ -20,13 +20,24 @@ func Login() gin.HandlerFunc {
 		if err := c.BindJSON(&jsonInput); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		}
-		//Check availible account
+		tmp := database.Account{
+			Email:    jsonInput.Email,
+			Password: jsonInput.Password,
+		}
+		//Check password account
 		userRepo := database.NewGormUserRepository()
-		_ = userRepo
-
+		result := database.CheckPasssword(userRepo, &tmp)
+		if !result { //password not equal
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "incorrect password",
+			})
+			return
+		}
+		//get id for jwt
+		idUser := database.GetID(userRepo, &tmp)
 		//id будет его айди из бд думай
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-			"id":     1,
+			"id":     idUser,                                     //id from bd
 			"exp":    time.Now().Add(time.Hour * 24 * 10).Unix(), // 10 day
 			"status": "admin",                                    //admin, user
 		})

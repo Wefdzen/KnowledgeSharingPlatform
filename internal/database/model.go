@@ -3,6 +3,7 @@ package database
 import (
 	"fmt"
 
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -45,4 +46,17 @@ func (r *GormUserRepository) CheckAvailibleEmail(ac *Account) bool {
 	}
 	fmt.Println("запись найдeна")
 	return true
+}
+
+func (r *GormUserRepository) CheckPasswordUser(ac *Account) bool {
+	var user Account
+	r.db.Where("email = ?", ac.Email).First(&user)
+	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(ac.Password))
+	return err == nil //return if equal otherwise return false
+}
+
+func (r *GormUserRepository) GetIDUser(ac *Account) uint {
+	var user Account
+	r.db.Where("email = ?", ac.Email).First(&user)
+	return user.ID
 }
