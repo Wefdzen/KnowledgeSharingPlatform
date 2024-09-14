@@ -11,6 +11,9 @@ type Account struct {
 	ID       uint
 	Email    string
 	Password string
+	Role     string
+	//his refresh token will be save in httpOnly cookie
+	RefreshToken string
 }
 
 type GormUserRepository struct {
@@ -32,7 +35,7 @@ func (r *GormUserRepository) DeleteUser(id uint) {
 }
 
 func (r *GormUserRepository) AddNewUser(ac *Account) {
-	r.db.Create(&Account{Email: ac.Email, Password: ac.Password}) //add a new record
+	r.db.Create(&Account{Email: ac.Email, Password: ac.Password, Role: ac.Role, RefreshToken: ""}) //add a new record
 	//return r.db.Create(...).Error for return err if not nil
 }
 
@@ -59,4 +62,14 @@ func (r *GormUserRepository) GetIDUser(ac *Account) uint {
 	var user Account
 	r.db.Where("email = ?", ac.Email).First(&user)
 	return user.ID
+}
+
+func (r *GormUserRepository) SetRefreshToken(idUser, refreshToken string) {
+	r.db.Model(&Account{}).Where("id = ?", idUser).UpdateColumn("refresh_token", refreshToken)
+}
+
+func (r *GormUserRepository) GetRefreshTokenUser(idUser string) string {
+	var user Account
+	r.db.Where("id = ?", idUser).First(&user)
+	return user.RefreshToken
 }

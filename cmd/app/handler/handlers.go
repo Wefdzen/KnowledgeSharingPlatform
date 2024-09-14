@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -37,17 +38,30 @@ func Login() gin.HandlerFunc {
 		idUser := database.GetID(userRepo, &tmp)
 		//id будет его айди из бд думай
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-			"id":     idUser,                                     //id from bd
-			"exp":    time.Now().Add(time.Hour * 24 * 10).Unix(), // 10 day
-			"status": "admin",                                    //admin, user
+			"id":        idUser,                                  //id from bd
+			"liveToken": time.Now().Add(time.Minute * 15).Unix(), // 30 min
+			"role":      jsonInput.Role,                          //admin, user
 		})
 		tokenString, err := token.SignedString([]byte(os.Getenv("secret_key")))
 		if err != nil {
-			panic("lol token")
+			panic("lol access token")
 		}
+
+		token2 := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"liveToken": time.Now().Add(time.Hour * 24 * 30).Unix(), // 30 day
+		})
+		tokenString2, err := token2.SignedString([]byte(os.Getenv("secret_key")))
+		if err != nil {
+			panic("lol refresh token")
+		}
+		//set refreshToken in db
+		userId := fmt.Sprintf("%v", idUser) // Преобразование id в строку
+		database.SetRefToken(userRepo, userId, tokenString2)
 		//setcookie
 		c.SetSameSite(http.SameSiteLaxMode)
-		c.SetCookie("JWT", tokenString, 3600*24*30, "", "", false, true)
+		c.SetCookie("accessToken", tokenString, 3600*24*30, "", "", false, true) // хранится тоже 30 дней в браузере ->
+		// -> потому что если он продет в middleware он не перейдет в проверку refresh
+		c.SetCookie("refreshToken", tokenString2, 3600*24*30, "", "", false, true)
 		c.JSON(http.StatusOK, gin.H{})
 	}
 }
@@ -68,8 +82,10 @@ func Registration() gin.HandlerFunc {
 		jsonInput.Password = string(hashPassword)
 
 		tmp := database.Account{
-			Email:    jsonInput.Email,
-			Password: jsonInput.Password,
+			Email:        jsonInput.Email,
+			Password:     jsonInput.Password,
+			Role:         "user",
+			RefreshToken: "",
 		}
 		//connect
 		userRepo := database.NewGormUserRepository()
@@ -95,5 +111,13 @@ func DeleteAccount() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userRepo := database.NewGormUserRepository()
 		database.RemoveUser(userRepo, 3) //get id from jwt
+	}
+}
+
+func MainPage() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"access": "success",
+		})
 	}
 }

@@ -7,6 +7,8 @@ type UserRepository interface {
 	CheckAvailibleEmail(ac *Account) bool
 	CheckPasswordUser(ac *Account) bool
 	GetIDUser(ac *Account) uint
+	SetRefreshToken(idUser, refreshToken string)
+	GetRefreshTokenUser(idUser string) string
 }
 
 func RegisterUser(repo UserRepository, ac *Account) {
@@ -37,4 +39,12 @@ func CheckPasssword(repo UserRepository, ac *Account) bool {
 //GetIDFromDB for jwt
 func GetID(repo UserRepository, ac *Account) uint {
 	return repo.GetIDUser(ac)
+}
+
+func SetRefToken(repo UserRepository, idUser, refToken string) {
+	repo.SetRefreshToken(idUser, refToken)
+}
+
+func GetRefToken(repo UserRepository, idUser string) string {
+	return repo.GetRefreshTokenUser(idUser)
 }
